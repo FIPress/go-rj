@@ -1,4 +1,4 @@
-package go_rj
+package rj
 
 type RJError struct {
 	msg string

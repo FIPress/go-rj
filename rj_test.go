@@ -1,1 +1,1 @@
-package go_rj
+package rj
