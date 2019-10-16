@@ -58,3 +58,13 @@ func Unmarshal(data []byte, v interface{}) (err error) {
 	}
 	return decodeNode(node, rv)
 }
+
+// UnmarshalFile decode a RJ file to struct
+func UnmarshalFile(path string, v interface{}) (err error) {
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return
+	}
+
+	return Unmarshal(bytes, v)
+}
