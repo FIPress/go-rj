@@ -233,3 +233,10 @@ age: 12
 	}
 
 }
+
+func TestScan(t *testing.T) {
+	in := `name: "a\b"
+array: ["a","b"]`
+	s := newScanner([]byte(in))
+	s.scan()
+}

@@ -64,7 +64,7 @@ func (s *scanner) addError(err error) {
 }
 
 func (s *scanner) scan() {
-	for i := s.offset; i < s.len; i++ {
+	for s.offset < s.len {
 		s.skipSpace()
 		switch s.data[s.offset] {
 		case '[':
@@ -158,7 +158,7 @@ func (s *scanner) scanValue() (val interface{}, err error) {
 			err = newError(invalidNullValue)
 		}
 	case c == '{':
-		s.scanObject()
+		val, err = s.scanObject()
 	default:
 		err = newError(invalidValue)
 	}
@@ -303,7 +303,7 @@ ERR:
 }
 
 func (s *scanner) scanRaw() (val string) {
-	val = s.scanUntil(func(b byte) bool {
+	val, _ = s.scanUntil(func(b byte) bool {
 		return isLineEnd(b) || b == '#' || b == ',' || b == ']'
 	}, false)
 
@@ -379,6 +379,8 @@ func (s *scanner) scanQuotedString() (val string, err error) {
 
 				ret = append(ret, ub[0:size]...)
 				i = j
+			default:
+				return "", newError(invalidEscape)
 			}
 		case c < utf8.RuneSelf:
 			// ASCII
@@ -407,7 +409,7 @@ func (s *scanner) scanQuotedString() (val string, err error) {
 
 func (s *scanner) scanRawString() (val string, err error) {
 	s.offset++
-	val = s.scanUntilChar('`')
+	val, err = s.scanUntilChar('`')
 	if err == nil {
 		s.offset++
 	} else {
@@ -451,11 +453,11 @@ func (s *scanner) scanObject() (val *Node, err error) {
 	return val, newError(invalidObject)
 }
 
-func (s *scanner) scanNode(parent *Node) error {
+func (s *scanner) scanNode(parent *Node) {
 	s.offset++
 	name := s.scanName()
 	if name == "" {
-		return newError(invalidNodeName)
+		s.addErrorMsg(invalidNodeName)
 	}
 
 	s.skip()
@@ -465,7 +467,6 @@ func (s *scanner) scanNode(parent *Node) error {
 	} else {
 		parent.dict[name] = s.scanSingleNode()
 	}
-	return nil
 }
 
 func (s *scanner) scanLine(parent *Node) {
@@ -595,9 +596,9 @@ func (s *scanner) findPosOf(c byte) int {
 	return -1
 }
 
-func (s *scanner) scanUntil(fn func(byte) bool, mustFound bool) (v string) {
+func (s *scanner) scanUntil(fn func(byte) bool, mustFound bool) (v string, found bool) {
 	i := s.offset
-	found := false
+
 	for ; i < s.len; i++ {
 		if fn(s.data[i]) {
 			found = true
@@ -613,10 +614,15 @@ func (s *scanner) scanUntil(fn func(byte) bool, mustFound bool) (v string) {
 	return
 }
 
-func (s *scanner) scanUntilChar(c byte) (v string) {
-	return s.scanUntil(func(b byte) bool {
+func (s *scanner) scanUntilChar(c byte) (v string, err error) {
+	v, found := s.scanUntil(func(b byte) bool {
 		return b == c
 	}, true)
+	if !found {
+		err = newError(invalidValue)
+	}
+
+	return
 }
 
 func (s *scanner) scanLineUntilChar(c byte) (v string, err error) {
