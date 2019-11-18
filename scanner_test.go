@@ -73,11 +73,51 @@ func dictEquals(a, b map[string]interface{}) bool {
 	return true
 }
 
+func TestIsComment(t *testing.T) {
+	cases := []testCase{
+		{input: `# This is a comment`, expected: true},
+		{input: `// This is also a comment`, expected: true},
+		{input: `Not a comment`, expected: false},
+	}
+
+	var sc *scanner
+	for _, c := range cases {
+		sc = newScanner([]byte(c.input))
+		if sc.isComment() != c.expected {
+			t.Error("TestIsComment failed, input: ", c.input, ",, expected:", c.expected)
+		}
+	}
+}
+
+func TestIsBlankLine(t *testing.T) {
+	cases := []testCase{
+		{input: `# This is a comment`, expected: true},
+		{input: `// This is also a comment`, expected: true},
+		{input: ` 	`, expected: true},
+		{input: `Not a blank line`, expected: false},
+		{input: ` 	Not a blank line either`, expected: false},
+	}
+
+	var sc *scanner
+	for _, c := range cases {
+		sc = newScanner([]byte(c.input))
+		if sc.isBlankLine() != c.expected {
+			t.Error("TestIsComment failed, input: ", c.input, ", expected:", c.expected)
+		}
+	}
+}
+
+func TestSkipRest(t *testing.T) {
+
+}
+
 func TestScanRaw(t *testing.T) {
 	cases := []testCase{
 		{input: `abc`, expected: "abc"},
 		{input: `123 #b`, expected: "123"},
 		{input: "de\n", expected: "de"},
+		{input: "fg,", expected: "fg"},
+		{input: "jk]", expected: "jk"},
 	}
 
 	var sc *scanner
@@ -208,21 +248,20 @@ age: 13
 
 func TestScanNode(t *testing.T) {
 	cases := []testCase{
-		{input: `[TestNode]
-name: "Jason"
-age: 12
-`, expected: map[string]interface{}{"name": "Jason", "age": 12}},
+		/*{input: `[TestNode]
+		name: "Jason"
+		age: 12
+		`, expected: map[string]interface{}{"name": "Jason", "age": 12}},*/
 		{input: "[TestNode", err: true},
 	}
 
 	var sc *scanner
-	var err error
 
 	for _, tc := range cases {
 		sc = newScanner([]byte(tc.input))
-		err = sc.scanNode(sc.root)
+		sc.scanNode(sc.root)
 		if tc.err {
-			if err == nil {
+			if sc.error == nil {
 				t.Error("ScanNode failed, there should be error.")
 			}
 		} else {

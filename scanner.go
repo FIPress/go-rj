@@ -66,13 +66,15 @@ func (s *scanner) addError(err error) {
 func (s *scanner) scan() {
 	for s.offset < s.len {
 		s.skipSpace()
-		switch s.data[s.offset] {
-		case '[':
+
+		if s.data[s.offset] == '[' {
 			s.scanNode(s.root)
-		case '#':
-		default:
+		} else if s.isComment() {
+			s.skipRestOfLine()
+		} else {
 			s.scanPair(s.root)
 		}
+
 		s.skipRestOfLine()
 	}
 }
@@ -303,12 +305,20 @@ ERR:
 }
 
 func (s *scanner) scanRaw() (val string) {
-	val, _ = s.scanUntil(func(b byte) bool {
-		return isLineEnd(b) || b == '#' || b == ',' || b == ']'
-	}, false)
+	start := s.offset
+	for ; s.offset < s.len; s.offset++ {
+		c := s.data[s.offset]
+		if isLineEnd(c) || c == ',' || c == ']' || s.isComment() {
+			val = string(s.data[start:s.offset])
+			break
+		}
+	}
 
-	val = strings.TrimSpace(val)
-	return
+	if s.offset == s.len {
+		val = string(s.data[start:])
+	}
+
+	return strings.TrimSpace(val)
 }
 
 func (s *scanner) scanString() (val string, err error) {
@@ -458,6 +468,8 @@ func (s *scanner) scanNode(parent *Node) {
 	name := s.scanName()
 	if name == "" {
 		s.addErrorMsg(invalidNodeName)
+		s.skipRestOfLine()
+		return
 	}
 
 	s.skip()
@@ -477,7 +489,6 @@ func (s *scanner) scanLine(parent *Node) {
 
 func (s *scanner) scanSingleNode() (node *Node) {
 	node = NewNode()
-
 	for !s.isBlankLine() {
 		s.scanLine(node)
 	}
@@ -503,7 +514,7 @@ func (s *scanner) scanNodeList() (list []*Node) {
 // skip to next meaningful byte
 func (s *scanner) skip() {
 	for i := s.offset; i < s.len; {
-		if s.data[i] == '#' || isLineEnd(s.data[i]) {
+		if s.isComment() || isLineEnd(s.data[i]) {
 			s.skipRestOfLine()
 			i = s.offset
 		} else if isSpace(s.data[i]) {
@@ -548,20 +559,21 @@ func (s *scanner) skipSpace() {
 
 func (s *scanner) skipRestOfArrayItem() scanState {
 	for i := s.offset; i < s.len; {
-		switch s.data[i] {
-		case ',':
+		c := s.data[i]
+		switch {
+		case c == ',':
 			s.offset = i + 1
 			return endOfItem
-		case ' ', '\t':
+		case isSpace(c):
 			i++
-			continue
-		case ']':
+			// continue
+		case c == ']':
 			s.offset = i + 1
 			return endOfArray
-		case '\n', '\r', '#':
+		case s.isComment() || isLineEnd(c):
 			s.skipRestOfLine()
 			i = s.offset
-			continue
+			// continue
 		default:
 			return scanError
 		}
@@ -596,33 +608,16 @@ func (s *scanner) findPosOf(c byte) int {
 	return -1
 }
 
-func (s *scanner) scanUntil(fn func(byte) bool, mustFound bool) (v string, found bool) {
-	i := s.offset
-
-	for ; i < s.len; i++ {
-		if fn(s.data[i]) {
-			found = true
-			break
+func (s *scanner) scanUntilChar(c byte) (v string, err error) {
+	for i := s.offset; i < s.len; i++ {
+		if s.data[i] == c {
+			v = string(s.data[s.offset:i])
+			s.offset = i
+			return
 		}
 	}
 
-	if found || !mustFound {
-		v = string(s.data[s.offset:i])
-		s.offset = i
-	}
-
-	return
-}
-
-func (s *scanner) scanUntilChar(c byte) (v string, err error) {
-	v, found := s.scanUntil(func(b byte) bool {
-		return b == c
-	}, true)
-	if !found {
-		err = newError(invalidValue)
-	}
-
-	return
+	return "", newError(invalidValue)
 }
 
 func (s *scanner) scanLineUntilChar(c byte) (v string, err error) {
@@ -658,16 +653,45 @@ func (s *scanner) scanExact(expect []byte) bool {
 	return true
 }
 
+// RJ support both '#' and `//` to start a comment
+func isComment(a, b byte) bool {
+	if a == '#' {
+		return true
+	}
+
+	if a == '/' && b == '/' {
+		return true
+	}
+
+	return false
+}
+
+func (s *scanner) isComment() bool {
+	if s.data[s.offset] == '#' {
+		return true
+	}
+
+	if s.data[s.offset] == '/' {
+		next := s.offset + 1
+		if next < s.len && s.data[next] == '/' {
+			return true
+		}
+	}
+
+	return false
+}
+
 //A node end by blank lines.
 //A blank line means it contains only spaces or comments
 func (s *scanner) isBlankLine() bool {
 	for i := s.offset; i < s.len; i++ {
-		switch s.data[i] {
-		case '\n', '\r', '#':
+		c := s.data[i]
+		if s.isComment() || isLineEnd(c) {
 			s.skipRestOfLine()
 			return true
-		case ' ', '\t':
-		default:
+		}
+
+		if !isSpace(c) {
 			return false
 		}
 	}
