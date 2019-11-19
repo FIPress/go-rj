@@ -484,6 +484,11 @@ func getFinalNameAndNode(name string, node *Node) (finalName string, finalNode *
 		return
 	}
 
+	if node == nil {
+		err = errValueNotFound
+		return
+	}
+
 	names := strings.SplitN(name, ".", 2)
 	//keys[0] is always there
 	if len(names[0]) == 0 {
