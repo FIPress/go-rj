@@ -44,6 +44,12 @@ func Marshal(v interface{}) []byte {
 	return e.encode()
 }
 
+// Marshal encodes a value to RJ bytes
+func MarshalToFile(v interface{}, filename string) error {
+	bytes := Marshal(v)
+	return ioutil.WriteFile(filename, bytes, 0644)
+}
+
 // Unmarshal decode RJ bytes to struct value
 func Unmarshal(data []byte, v interface{}) (err error) {
 	node, err := Parse(data)
