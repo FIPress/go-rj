@@ -64,7 +64,7 @@ func (s *scanner) addError(err error) {
 }
 
 func (s *scanner) scan() {
-	for s.offset < s.len {
+	for s.offset < s.len-1 {
 		s.skipSpace()
 
 		if s.data[s.offset] == '[' {
@@ -308,7 +308,7 @@ func (s *scanner) scanRaw() (val string) {
 	start := s.offset
 	for ; s.offset < s.len; s.offset++ {
 		c := s.data[s.offset]
-		if isLineEnd(c) || c == ',' || c == ']' || s.isComment() {
+		if isLineEnd(c) || c == ',' || c == ']' || c == '}' || s.isComment() {
 			val = string(s.data[start:s.offset])
 			break
 		}
@@ -344,6 +344,7 @@ func (s *scanner) scanQuotedString() (val string, err error) {
 			} else {
 				val = string(s.data[s.offset:i])
 			}
+
 			s.offset = i + 1
 			return
 		case c == '\\':
@@ -443,21 +444,12 @@ func (s *scanner) scanObject() (val *Node, err error) {
 	s.offset++ //skip '{'
 	val = NewNode()
 
-	for i := s.offset; i < s.len; i++ {
-		//'}' could be at the beginning at the end of a line
-		s.skipSpace()
-		if s.data[i] == '}' {
+	for s.offset < s.len-1 {
+		s.skip()
+		if s.data[s.offset] == '}' {
 			return
 		}
 		s.scanPair(val)
-
-		s.skipUntil(func(b byte) bool {
-			return isLineEnd(b) || b == '}'
-		})
-		if s.data[i] == '}' {
-			return
-		}
-		s.skipLineEnd()
 	}
 
 	return val, newError(invalidObject)
@@ -513,7 +505,17 @@ func (s *scanner) scanNodeList() (list []*Node) {
 
 // skip to next meaningful byte
 func (s *scanner) skip() {
-	for i := s.offset; i < s.len; {
+	for s.offset < s.len-1 {
+		c := s.data[s.offset]
+		if s.isComment() || isLineEnd(c) {
+			s.skipRestOfLine()
+		} else if isSpace(c) {
+			s.offset++
+		} else {
+			return
+		}
+	}
+	/*for i := s.offset; i < s.len; {
 		if s.isComment() || isLineEnd(s.data[i]) {
 			s.skipRestOfLine()
 			i = s.offset
@@ -523,7 +525,7 @@ func (s *scanner) skip() {
 		} else {
 			return
 		}
-	}
+	}*/
 }
 
 func (s *scanner) skipLineEnd() {
@@ -582,11 +584,11 @@ func (s *scanner) skipRestOfArrayItem() scanState {
 }
 
 func (s *scanner) skipUntil(fn func(byte) bool) {
-	for i := s.offset; i < s.len; i++ {
-		if fn(s.data[i]) {
-			s.offset = i
+	for s.offset < s.len-1 {
+		if fn(s.data[s.offset]) {
 			return
 		}
+		s.offset++
 	}
 }
 

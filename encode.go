@@ -18,6 +18,18 @@ func newEncoder(v interface{}) *encoder {
 
 func (e *encoder) encode() []byte {
 	rv := reflect.ValueOf(e.val)
+	if rv.Kind() == reflect.Ptr {
+		rv = rv.Elem()
+	}
+
+	if rv.Kind() != reflect.Struct {
+		e.encodeFields(rv)
+	}
+	return e.Bytes()
+}
+
+func (e *encoder) doEncode() []byte {
+	rv := reflect.ValueOf(e.val)
 	e.encodeVal(rv)
 	return e.Bytes()
 }
@@ -69,11 +81,15 @@ func (e *encoder) encodeStruct(v reflect.Value) {
 		return
 	}
 
-	n := v.NumField()
 	e.WriteString(vt.Name())
 	e.WriteByte(':')
 	e.WriteByte('{')
 
+	e.WriteByte('}')
+}
+
+func (e *encoder) encodeFields(v reflect.Value) {
+	n := v.NumField()
 	for i := 0; i < n; i++ {
 		f := v.Field(i)
 		ft := f.Type()
@@ -89,7 +105,6 @@ func (e *encoder) encodeStruct(v reflect.Value) {
 		e.WriteByte('\n')
 
 	}
-	e.WriteByte('}')
 }
 
 func (e *encoder) encodeArray(v reflect.Value) {

@@ -107,10 +107,6 @@ func TestIsBlankLine(t *testing.T) {
 	}
 }
 
-func TestSkipRest(t *testing.T) {
-
-}
-
 func TestScanRaw(t *testing.T) {
 	cases := []testCase{
 		{input: `abc`, expected: "abc"},
@@ -157,11 +153,11 @@ func TestScanQuotedString(t *testing.T) {
 }
 func TestScanPair(t *testing.T) {
 	cases := []testCase{
-		{input: `name: "str \n value"`, expected: map[string]interface{}{"name": "str \n value"}},
+		/*{input: `name: "str \n value"`, expected: map[string]interface{}{"name": "str \n value"}},
 		{input: `age: 123`, expected: map[string]interface{}{"age": 123}},
 		{input: `raw: ` + "`" + `adf \n df` + "`", expected: map[string]interface{}{"raw": "adf \\n df"}},
 		{input: `b: true`, expected: map[string]interface{}{"b": "true"}},
-		{input: `arrInt: [1,2,3]`, expected: map[string]interface{}{"arrInt": []int{1, 2, 3}}},
+		{input: `arrInt: [1,2,3]`, expected: map[string]interface{}{"arrInt": []int{1, 2, 3}}},*/
 		{input: `arrStr: ["a","b",
 				# Test line breaks and comments
 				"c"]`, expected: map[string]interface{}{"arrStr": []string{"a", "b", "c"}}},
@@ -248,10 +244,10 @@ age: 13
 
 func TestScanNode(t *testing.T) {
 	cases := []testCase{
-		/*{input: `[TestNode]
+		{input: `[TestNode]
 		name: "Jason"
 		age: 12
-		`, expected: map[string]interface{}{"name": "Jason", "age": 12}},*/
+		`, expected: map[string]interface{}{"name": "Jason", "age": 12}},
 		{input: "[TestNode", err: true},
 	}
 

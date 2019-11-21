@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"log"
-	"reflect"
 )
 
 // Load loads a file of given path and parse it into a node
@@ -30,7 +29,11 @@ func Parse(input []byte) (node *Node, err error) {
 	scanner := newScanner(input)
 	scanner.scan()
 
-	return scanner.root, scanner.error
+	node = scanner.root
+	if scanner.error != nil && scanner.error.msg != "" {
+		err = scanner.error
+	}
+	return
 }
 
 // ParseString parses a string to a node
@@ -41,7 +44,7 @@ func ParseString(input string) (node *Node, err error) {
 // Marshal encodes a value to RJ bytes
 func Marshal(v interface{}) []byte {
 	e := newEncoder(v)
-	return e.encode()
+	return e.doEncode()
 }
 
 // Marshal encodes a value to RJ bytes
@@ -52,17 +55,18 @@ func MarshalToFile(v interface{}, filename string) error {
 
 // Unmarshal decode RJ bytes to struct value
 func Unmarshal(data []byte, v interface{}) (err error) {
-	node, err := Parse(data)
+	var node *Node
+	node, err = Parse(data)
 	if err != nil {
 		return
 	}
 
-	rv := reflect.ValueOf(v)
+	/*rv := reflect.ValueOf(v)
 
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return errValueNotAssignable
-	}
-	return decodeNode(node, rv)
+	}*/
+	return decode(node, v)
 }
 
 // UnmarshalFile decode a RJ file to struct
