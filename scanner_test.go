@@ -1,12 +1,86 @@
 package rj
 
 import (
+	"reflect"
 	"testing"
 	"time"
 )
 
+func arrayEquals(a, b interface{}) bool {
+	switch va := a.(type) {
+	case []string:
+		l := len(va)
+		vb := b.([]string)
+		if len(vb) != l {
+			return false
+		}
+		for i := 0; i < l; i++ {
+			if va[i] != vb[i] {
+				return false
+			}
+		}
+	case []int:
+		l := len(va)
+		vb := b.([]int)
+		if len(vb) != l {
+			return false
+		}
+		for i := 0; i < l; i++ {
+			if va[i] != vb[i] {
+				return false
+			}
+		}
+	case []float64:
+		l := len(va)
+		vb := b.([]float64)
+		if len(vb) != l {
+			return false
+		}
+		for i := 0; i < l; i++ {
+			if va[i] != vb[i] {
+				return false
+			}
+		}
+	case []bool:
+		l := len(va)
+		vb := b.([]bool)
+		if len(vb) != l {
+			return false
+		}
+		for i := 0; i < l; i++ {
+			if va[i] != vb[i] {
+				return false
+			}
+		}
+	case []time.Time:
+		l := len(va)
+		vb := b.([]time.Time)
+		if len(vb) != l {
+			return false
+		}
+		for i := 0; i < l; i++ {
+			if va[i] != vb[i] {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func dictEquals(a, b map[string]interface{}) bool {
 	for k, v := range a {
+		ta := reflect.TypeOf(v)
+
+		if ta.Name() == "Time" {
+			vt := v.(time.Time)
+			return vt.Equal(b[k].(time.Time))
+		}
+
+		kind := ta.Kind()
+		if kind == reflect.Slice || kind == reflect.Array {
+			return arrayEquals(v, b[k])
+		}
+
 		switch vt := v.(type) {
 		case []string:
 			l := len(vt)
