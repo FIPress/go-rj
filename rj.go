@@ -44,7 +44,7 @@ func ParseString(input string) (node *Node, err error) {
 // Marshal encodes a value to RJ bytes
 func Marshal(v interface{}) []byte {
 	e := newEncoder(v)
-	return e.doEncode()
+	return e.encode()
 }
 
 // Marshal encodes a value to RJ bytes

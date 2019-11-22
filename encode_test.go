@@ -21,7 +21,7 @@ func TestEncodeVal(t *testing.T) {
 
 	for _, tc := range cases {
 		e := newEncoder(tc.input)
-		bts := e.doEncode()
+		bts := e.encode()
 		if string(bts) != tc.expected {
 			t.Error("Test doEncode failed, input:", tc.input, ", expected:", tc.expected, ", got: ", string(bts))
 		}
@@ -35,10 +35,10 @@ func TestEncodeStruct(t *testing.T) {
 	}
 	s := stu{Name: "Jimmy", Age: 12}
 	e := newEncoder(s)
-	bts := e.doEncode()
-	out := `s:{Name:"Jimmy"
+	bts := e.encode()
+	out := `Name:"Jimmy"
 Age:12
-}`
+`
 	if string(bts) != out {
 		t.Error("Test doEncode struct failed, expected: ", out, ", got: ", string(bts))
 	}

@@ -273,6 +273,10 @@ func TestNode_GetStringArray(t *testing.T) {
 
 	if err != nil {
 		t.Error("GetStringArrayOrError failed, expected no error, got:", err)
+	} else {
+		if !arrayEquals(arr, expected) {
+			t.Error("GetStringArrayOrError failed, expected:", expected, ", got:", arr)
+		}
 	}
 
 }

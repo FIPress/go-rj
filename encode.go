@@ -22,8 +22,15 @@ func (e *encoder) encode() []byte {
 		rv = rv.Elem()
 	}
 
-	if rv.Kind() != reflect.Struct {
-		e.encodeFields(rv)
+	if rv.Kind() == reflect.Struct {
+		vt := rv.Type()
+		if vt.Name() == "Time" {
+			e.encodeTime(rv)
+		} else {
+			e.encodeFields(rv, vt)
+		}
+	} else {
+		e.encodeVal(rv)
 	}
 	return e.Bytes()
 }
@@ -76,19 +83,17 @@ func (e *encoder) encodeTime(v reflect.Value) {
 
 func (e *encoder) encodeStruct(v reflect.Value) {
 	vt := v.Type()
-	if vt.Name() == "Time" {
-		e.encodeTime(v)
-		return
-	}
 
 	e.WriteString(vt.Name())
 	e.WriteByte(':')
 	e.WriteByte('{')
 
+	e.encodeFields(v, vt)
+
 	e.WriteByte('}')
 }
 
-func (e *encoder) encodeFields(v reflect.Value) {
+func (e *encoder) encodeFields(v reflect.Value, vt reflect.Type) {
 	n := v.NumField()
 	for i := 0; i < n; i++ {
 		f := v.Field(i)
@@ -100,7 +105,7 @@ func (e *encoder) encodeFields(v reflect.Value) {
 		}
 
 		e.WriteString(vt.Field(i).Name)
-		e.WriteByte(':')
+		e.WriteString(": ")
 		e.encodeVal(f)
 		e.WriteByte('\n')
 
